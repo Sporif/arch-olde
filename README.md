@@ -1,84 +1,65 @@
-`nix-olde` is a tool to show details about outdated packages in your
-`NixOS` system using <https://repology.org/> database.
+`arch-olde` is a tool to show details about outdated packages in your
+`Arch Linux` system using the <https://repology.org/> database.
 
-It can use both default `<nixpkgs>` or custom URL or path specified via
-`--nixpkgs / -n` parameter.
-
-I usually use the tool to see what I could update in `nixpkgs` that my
-system currently uses.
+This is a fork of [nix-olde](https://github.com/trofi/nix-olde).
 
 # Dependencies
 
-At runtime `nix-olde` uses 2 external packages and expects them in `PATH`:
+At runtime `arch-olde` uses 2 external packages and expects them in `PATH`:
 
 - `curl` to fetch `repology.org` reports
-- `nix` to query locally installed and available packages
+- `pacman` to query locally installed packages
 
-To build `nix-olde` you will need `rustc` and `cargo`. `Cargo.tml`
+To build `arch-olde` you will need `rustc` and `cargo`. `Cargo.tml`
 contains more detailed description of dependencies.
 
 # Running it
 
-```
-$ nix run github:trofi/nix-olde
-```
-
-Diff against current system:
+Diff current system against the outdated repology repo:
 
 ```
-$ nix-olde
+$ arch-olde
 ```
 
-Diff against latest `staging`:
+Diff current system against the entire repology repo.
+This takes much longer but is useful if your system contains packages older than the latest Arch Linux repos:
 
 ```
-$ nix-olde -n https://github.com/NixOS/nixpkgs/archive/refs/heads/staging.tar.gz
-```
-
-Or against local checkout:
-
-```
-$ nix-olde -n ./nixpkgs
-```
-
-I usually use small shell wrapper to build-and-run against local
-`staging` checkout:
-
-```
-$ ./mkrun.bash -n $(realpath ~/n)
+$ arch-olde --full-repo
 ```
 
 # Typical output
 
 ```
-$ cargo build && target/debug/nix-olde
+$ arch-olde
 ...
 Fetching 'repology'
-Fetching 'available'
 Fetching 'installed'
-'installed' done, took 6.10 s.
-'available' done, took 12.22 s.
-'repology' done, took 75.38 s.
+'installed' done, took 0.03 s.
+'repology' done, took 53.86 s.
 
-repology a52dec "0.8.0" | nixpkgs {"0.7.4"} {"nixos.a52dec"}
-repology alsa-lib "1.2.8" | nixpkgs {"1.2.7.2"} {"nixos.alsa-lib"}
-repology alsa-ucm-conf "1.2.8" | nixpkgs {"1.2.7.1"} {"nixos.alsa-ucm-conf"}
-repology appstream "0.15.6" | nixpkgs {"0.15.5"} {"nixos.appstream"}
-repology atomicparsley "20221229" | nixpkgs {"20210715.151551.e7ad03a"} {"nixos.atomicparsley"}
-repology audit "3.0.9" | nixpkgs {"2.8.5"} {"nixos.audit"}
-repology autogen "5.19.96" | nixpkgs {"5.18.16"} {"nixos.autogen"}
+Number of packages found in repology: 173
+
+repology abseil-cpp "20250127.0" | archlinux abseil-cpp "20240722.1"
+repology blake3 "1.6.0" | archlinux b3sum "1.5.5"
+repology blake3 "1.6.0" | archlinux libblake3 "1.5.5"
+repology clinfo "3.0.25.02.14" | archlinux clinfo "3.0.23.01.25"
+repology composefs "1.0.8" | archlinux composefs "1.0.4"
+repology cppdap "1.65" | archlinux cppdap "1.58.0"
+repology db "18.1.40" | archlinux db5.3 "5.3.28"
 ...
-repology xrandr "1.5.2" | nixpkgs {"1.5.1"} {"nixos.xorg.xrandr"}
-repology xset "1.2.5" | nixpkgs {"1.2.4"} {"nixos.xorg.xset"}
-repology xsetroot "1.1.3" | nixpkgs {"1.1.2"} {"nixos.xorg.xsetroot"}
-repology xterm "378" | nixpkgs {"377"} {"nixos.xterm"}
-repology xz "5.4.1" | nixpkgs {"5.4.0"} {"nixos.xz"}
-repology zxing-cpp-nu-book "2.0.0" | nixpkgs {"1.4.0"} {"nixos.zxing-cpp"}
+repology virglrenderer "1.1.0" | archlinux virglrenderer "1.0.1"
+repology vulkan-headers "1.4.309" | archlinux vulkan-headers "1.4.303"
+repology vulkan-loader "1.4.309" | archlinux vulkan-icd-loader "1.4.303"
+repology vulkan-tools "1.4.309" | archlinux vulkan-tools "1.4.303"
+repology which "2.23" | archlinux which "2.21"
+repology x265 "4.1" | archlinux x265 "4.0"
+repology zstd "1.5.7" | archlinux zstd "1.5.6"
+114 of 1111 (10.26%) installed packages are outdated according to https://repology.org.
 
-388 of 1518 (25.56%) installed packages are outdated according to https://repology.org.
-
-Some installed packages are missing in available list: 68
-  Add '--verbose' to get it's full list.
+repology jxrlib-unclassified <none> | archlinux jxrlib "0.2.4"
+repology luajit <none> | archlinux luajit "2.1.1736781742"
+2 of 1111 (0.18%) installed packages have no latest version at https://repology.org.
 ```
 
 # Other options
@@ -86,28 +67,21 @@ Some installed packages are missing in available list: 68
 There are a few options:
 
 ```
-$ ./mkrun.bash --help
+$ ./arch-olde --help
 
 A tool to show outdated packages in current system according to repology.org database
 
-Usage: nix-olde [OPTIONS]
+Usage: arch-olde [OPTIONS]
 
 Options:
-  -n, --nixpkgs <NIXPKGS>  Alternative path to <nixpkgs> location
-  -v, --verbose            Enable extra verbosity to report unexpected events, fetch progress and so on
-  -f, --flake <FLAKE>      Pass a system flake alternative to /etc/nixos default
-  -h, --help               Print help
-  -V, --version            Print version
+  -v, --verbose...  Increase logging verbosity
+  -q, --quiet...    Decrease logging verbosity
+      --full-repo   Use the full repology repo (instead of adding '&outdated=1' to the fetch url)
+  -h, --help        Print help
+  -V, --version     Print version
 ```
 
-`--nixpkgs` / `-n` is most useful when you are looking for packages that
-were not yet updated in a particular development branch of `nixpkgs`
-repository (usually `staging` or `master`).
-
-`--flake` / `-f` is useful for evaluation of system different from the
-default.
-
-# How `nix-olde` works
+# How `arch-olde` works
 
 The theory is simple: fetch data from various data sources and join
 them together. Each data source returns a tuple of package name,
@@ -116,49 +90,20 @@ systems, possible status).
 
 Currently used data sources are:
 
-- installed packages: uses `nix-instantiate` / `nix show-derivation`.
+- installed packages: uses `pacman -Q`.
   Provides fields:
-  * `name` (example: `python3.10-networkx-2.8.6`)
-  * `version` (example: `2.8.6`)
-- available packages: uses `nix-env -qa --json` tool, memory hungry.
-  Provides fields:
-  * [keyed from installed packages] `name` (example: `python3.10-networkx-2.8.6`)
-  * `attribute`: `nixpkgs` attribute path (example: `nixos.python310Packages.networkx`)
-  * `pname`: `name` with `version` component dropped (example: `nixos.python310Packages.networkx`)
-  * `version` (example: `2.8.6`)
+  * `name` (example: `7zip`)
+  * `version` (example: `24.09-3`)
 - <https://repology.org/> `json` database: uses
   `https://repology.org/api/v1/projects/` `HTTP` endpoint. Provides
   fields:
-  * `repo`: package repository (example: "nix_unstable")
-  * [keyed from available] `name`: with `version` component
-    dropped (example: `nixos.python310Packages.networkx`).
-  * `version` (example: `2.8.6`)
+  * `repo`: package repository (example: "arch")
+  * `visiblename`: (example: `7zip`)
+  * `version` (example: `24.09-3`)
   * `status`: package status in repository (examples: "newest",
     "outdared").
 
 # License
 
-`nix-olde` is distributed under
+`arch-olde` is distributed under
 [MIT license](https://opensource.org/licenses/MIT).
-
-# Frequent problems and workarounds
-
-## `nix-20.25` fails with `'/etc/nixos': ... is not owned by current user`
-
-This is known as [nix#10202](https://github.com/NixOS/nix/issues/10202)
-issue. `libgit2` does not allow opening repositories not owned by current
-user.
-
-As a workaround you can allow `/etc/nixos` just for your user as:
-
-```
-$ git config --global --add safe.directory /etc/nixos
-```
-
-This should add the following line to you `~/.gitconfig`:
-
-```
-[safe]
-        # workaround https://github.com/NixOS/nix/issues/10202
-        directory = /etc/nixos
-```
