@@ -1,5 +1,6 @@
 use std::collections::BTreeMap;
 use std::collections::BTreeSet;
+use std::time::{Duration,Instant};
 
 use serde_derive::Deserialize;
 
@@ -37,10 +38,30 @@ pub(crate) fn get_packages(
     //     https://repology.org/api/v1/projects/${suffix}?inrepo=arch&outdated=1
     let mut suffix: String = "".to_string();
 
+    // repology.org imposes a limit of 1 fetch per second:
+    //     https://repology.org/api/v1
+    // We keep here the time we are allowed to fetch next batch.
+    let min_fetch_interval = Duration::from_secs(1);
+    let mut next_fetch_time = Instant::now();
+
     loop {
         if cancel_fetch() {
             return Err(OldeError::Canceled(String::from("Repology fetch")));
         }
+
+        // implement trivial throttling
+        let now = Instant::now();
+        if now.lt(&next_fetch_time)
+        {
+            // TODO: when encountered with a transient failure it might
+            // be worthwile increasing the delay here and retry.
+            // TODO: randomize the delay slightly to spread the delay
+            // between multiple possible clients.
+            let delay = next_fetch_time - now;
+            log::debug!("Wait for {delay:?} before next fetch");
+            std::thread::sleep(delay);
+        }
+
         let mut url = format!("https://repology.org/api/v1/projects/{suffix}?inrepo=arch");
         if !full_repo {
             url.push_str("&outdated=1");
@@ -55,7 +76,22 @@ pub(crate) fn get_packages(
         );
 
         log::debug!("Fetching from repology: {:?}", suffix);
-        let contents_u8 = run_cmd(&["curl", "--user-agent", &user_agent, &url])?;
+        let contents_u8 = run_cmd(&[
+            "curl",
+            // Don't write to stderr things that are not problems.
+            "--no-progress-meter",
+            // Fail `curl` colland when server returns errors like
+            // throttling (429).
+            "--fail-with-body",
+            "--user-agent",
+            &user_agent,
+            &url,
+        ])?;
+
+        // Make sure we allow at least min_fetch_interval between previous
+        // `curl` finish and next `curl` start.
+        next_fetch_time = Instant::now() + min_fetch_interval;
+
         // {
         //   "python:networkx": [
         //     {
